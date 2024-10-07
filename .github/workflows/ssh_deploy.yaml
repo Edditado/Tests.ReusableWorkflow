@@ -14,7 +14,7 @@ on:
         type: string
       deploy_max_parallel:
         required: false
-        type: string
+        type: number
         default: 1
 jobs:
   set-matrix:
