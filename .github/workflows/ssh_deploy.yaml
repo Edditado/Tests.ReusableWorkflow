@@ -1,0 +1,47 @@
+name: ssh deploy
+
+on: 
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+      servers-file:
+        required: true
+        type: string
+      script:
+        required: true
+        type: string
+      deploy_max_parallel:
+        required: false
+        type: string
+        default: 1
+jobs:
+  set-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      server-matrix: ${{ steps.output-services.outputs.DEPLOYMENT_MATRIX }}
+    steps:
+      - uses: actions/checkout@v3
+      - name: output services
+        id: output-services
+        run: |
+            delimiter="$(openssl rand -hex 8)"
+            JSON="$(cat ${{inputs.servers-file}})"
+            echo "DEPLOYMENT_MATRIX<<${delimiter}" >> "${GITHUB_OUTPUT}"
+            echo "$JSON" >> "${GITHUB_OUTPUT}"
+            echo "${delimiter}" >> "${GITHUB_OUTPUT}"
+  update-server:
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    needs: set-matrix
+    strategy:
+      matrix:
+          server: ${{fromJSON(needs.set-matrix.outputs.server-matrix)}}
+      max-parallel: ${{ inputs.deploy_max_parallel }}
+    name: Updating ${{ matrix.server.name }}
+    steps:
+      - name: remote connection
+        run: |
+          echo ${{ matrix.server.name }}
+          ${{ inputs.script }}
